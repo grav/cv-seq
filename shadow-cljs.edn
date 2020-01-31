@@ -4,6 +4,7 @@
  :builds
  {:app {:target :browser
         :asset-path "/js"
-        :modules {:main {:init-fn idb-fun.core/main}}
-        :dev {:output-dir "public/js"}}}
+        :modules {:main {:init-fn example.core/main}}
+        :dev {:output-dir "public/js"}
+        :release {:output-dir "public_release/js"}}}
  :dev-http {8000 "public"}}
