@@ -32,25 +32,28 @@
 
 (defn app []
   [:div
-   (let [{:keys [steps ctx]} @!app-state]
+   (let [{:keys [playing steps ctx]} @!app-state]
      (println 'ctx ctx)
      (if ctx
        [:div
-        [:button {:on-click #(seq/play-repeatedly
-                               {:now-fn (fn [] (.now (.-performance js/window)))
-                                :ding (fn [[_ _ v t]]
-                                        (println (.-currentTime ctx))
-                                        _ (.setValueAtTime (.-gain the-gain) 0.5 t)
-                                        (print v t))
-                                :on-update-beat (fn [%]
-                                                  (swap! !app-state assoc :beat %))
-                                :seq-transform (fn [seq]
-                                                 [{:device nil
-                                                   :sequence {:sequence (for [s seq]
-                                                                          [{:note s}])}}])
-                                :!sequences (r/cursor !app-state [:steps])}
-                               {:beat 0
-                                :time 0})} "Start"]
+        [:button {:on-click (fn []
+                              (swap! !app-state assoc :playing true)
+                              (seq/play-repeatedly
+                                {:now-fn (fn [] (.now (.-performance js/window)))
+                                 :ding (fn [[_ _ v t]]
+                                         (println (.-currentTime ctx))
+                                         _ (.setValueAtTime (.-gain the-gain) 0.5 t)
+                                         (print v t))
+                                 :on-update-beat (fn [%]
+                                                   (swap! !app-state assoc :beat %))
+                                 :seq-transform (fn [seq]
+                                                  [{:device nil
+                                                    :sequence {:sequence (for [s seq]
+                                                                           [{:note s}])}}])
+                                 :!sequences (r/cursor !app-state [:steps])}
+                                {:beat 0
+                                 :time 0}))
+                  :disabled playing} "Start"]
         [v/sequence-view {:steps steps
                           :step-playing 2
                           :on-steps-changed #(swap! !app-state assoc :steps %)}]]
