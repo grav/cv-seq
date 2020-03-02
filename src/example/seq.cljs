@@ -17,6 +17,10 @@
        (map-indexed (fn [i v] [(+ time (* i spt)) v]))
        (take-while (fn [[t _]] (< t (+ now (* 1.5 latency)))))))
 
+(defn debug [v]
+  (println 'debug v)
+  v)
+
 (defn play-sequences! [{:keys [latency bpm sequences now beat time]}]
   ":notes - notes to be immediately queued up
    :beat :time - pointers to next "
@@ -33,17 +37,17 @@
                                       0))
         beat' (+ c beat)
         time' (+ (* spt c) time)]
-    {:beat      beat'
-     :time      time'
+    {:beat beat'
+     :time time'
      :sequences sequences}))
 
 (def latency 1)
 
-(defn ding [args]
-  (print 'ding args))
+#_(defn ding [args]
+    (print 'ding args))
 
 (defn play-repeatedly
-  [{:keys [now-fn on-update-beat !sequences seq-transform]} {:keys [beat time]}]
+  [{:keys [now-fn on-update-beat !sequences seq-transform ding]} {:keys [beat time]}]
   (let [bpm 110
         {:keys [position sequences]
          :as res} (play-sequences! {:latency latency
@@ -55,12 +59,14 @@
     (doseq [n (for [{:keys [device notes channel]} sequences
                     [i vs] notes
                     {:keys [note sustain]} vs]
-                [device channel (+ 0x24 note) i sustain])]
-      (apply ding n))
+                [device channel note #_(+ 0x24 note) i sustain])]
+      (ding n))
     (on-update-beat beat)
     (js/setTimeout #(play-repeatedly {:now-fn now-fn
+                                      :ding ding
                                       :!sequences !sequences
                                       :seq-transform seq-transform
                                       :on-update-beat on-update-beat}
                                      res)
                    (* latency 1000))))
+

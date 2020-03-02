@@ -3,7 +3,7 @@
             [example.view :as v]
             [example.seq :as seq]))
 
-(def n-steps 10)
+(def n-steps 8)
 
 (defonce !steps (r/atom (vec (repeat n-steps 0))))
 
@@ -17,15 +17,16 @@
     (.close ctx))
 
   (let [ctx (reset! !ctx (js/window.AudioContext.))
-        osc (.createOscillator ctx)
+        osc (.createOscillator ctx) #_(.createConstantSource ctx)
         _ (set! (.-type osc) "sine")
-        _ (.setValueAtTime (.-frequency osc) 4 (.-currentTime ctx))
+        _ (.setValueAtTime (.-frequency osc) 8(.-currentTime ctx))
         gain (.createGain ctx)
         _ (.setValueAtTime (.-gain gain) 0.5 (.-currentTime ctx))
 
         scriptNode (.createScriptProcessor ctx 4096 1 1)
         _ (set! (.-onaudioprocess scriptNode) (js/algebra #(+ 0.5 %)))]
 
+    (def the-gain gain)
     (.connect osc gain)
     (.connect gain scriptNode)
     (.connect scriptNode (.-destination ctx))
@@ -37,8 +38,13 @@
      (do
        (setup!)
        [:div
+
         [:button {:on-click #(seq/play-repeatedly
                                {:now-fn (fn [] (.now (.-performance js/window)))
+                                :ding (fn [[_ _ v t]]
+                                        (println (.-currentTime @!ctx))
+                                        _ (.setValueAtTime (.-gain the-gain) 0.5 t)
+                                        (print v t))
                                 :on-update-beat (fn [%]
                                                   (swap! !app-state assoc :beat %))
                                 :seq-transform (fn [seq]
@@ -52,6 +58,7 @@
                           :step-playing 2
                           :on-steps-changed #(reset! !steps %)}]])
      [:button {:on-click (fn []
+
                            (setup!))}
       "Start"])])
 
