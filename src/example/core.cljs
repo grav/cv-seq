@@ -14,21 +14,21 @@
     (when ctx
       (.close ctx)))
 
-  (let [{:keys [ctx]} (swap! !app-state assoc :ctx (js/window.AudioContext.))
+  (let [ctx (js/window.AudioContext.)
         osc (.createOscillator ctx) #_(.createConstantSource ctx)
         _ (set! (.-type osc) "sine")
-        _ (.setValueAtTime (.-frequency osc) 8(.-currentTime ctx))
+        _ (.setValueAtTime (.-frequency osc) 8 (.-currentTime ctx))
         gain (.createGain ctx)
         _ (.setValueAtTime (.-gain gain) 0.5 (.-currentTime ctx))
 
         scriptNode (.createScriptProcessor ctx 4096 1 1)
         _ (set! (.-onaudioprocess scriptNode) (js/algebra #(+ 0.5 %)))]
 
-    (def the-gain gain)
     (.connect osc gain)
     (.connect gain scriptNode)
     (.connect scriptNode (.-destination ctx))
-    (.start osc)))
+    (.start osc)
+    (swap! !app-state assoc :ctx ctx :osc osc)))
 
 (defn app []
   [:div
@@ -41,9 +41,14 @@
                               (seq/play-repeatedly
                                 {:now-fn (fn [] (.now (.-performance js/window)))
                                  :ding (fn [[_ _ v t]]
-                                         (println (.-currentTime ctx))
-                                         _ (.setValueAtTime (.-gain the-gain) 0.5 t)
-                                         (print v t))
+                                         (let [{:keys [ctx osc]} @!app-state]
+                                           (.setValueAtTime (.-frequency osc)
+                                                            (-> (* 440 v)
+                                                                (+ 440))
+                                                            t)
+                                           (println 'current-time (.-currentTime ctx))
+                                           #_#__ (.setValueAtTime (.-gain the-gain) 0.5 t)
+                                           (print v t)))
                                  :on-update-beat (fn [%]
                                                    (swap! !app-state assoc :beat %))
                                  :seq-transform (fn [seq]
