@@ -1,18 +1,27 @@
-(ns example.view)
+(ns example.view
+  (:require [reagent.core :as r]))
 
-(defn block [{:keys [selected on-select playing]}]
-  [:div {:style {:width 50
-                 :height 50
-                 :border-style :solid
-                 :border-widh 1
-                 :pointer :cursor
-                 :background-color (if selected
-                                     (if playing
-                                       "#aaff00"
-                                       :green)
-                                     (if playing :yellow
-                                                 :white))}
-         :on-mouse-down on-select}])
+(defn block []
+  (let [!lstate (r/atom nil)]
+    (fn [{:keys [selected on-select playing]}]
+      [:div {:style {:width 50
+                     :height 50
+                     :border-style :solid
+                     :border-widh 1
+                     :pointer :cursor
+                     :background-color (if @!lstate
+                                         (if selected
+                                           :lightblue
+                                           "#6666ff")
+                                         (if selected
+                                           (if playing
+                                             "#aaff00"
+                                             :green)
+                                           (if playing :yellow
+                                                       :white)))}
+             :on-mouse-down on-select
+             :on-mouse-over #(reset! !lstate true)
+             :on-mouse-out #(reset! !lstate false)}])))
 
 (def n 10)
 
