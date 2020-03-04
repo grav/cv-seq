@@ -1,2 +1,3 @@
-public/js
-public_release/js
+public/js/cljs-runtime
+public/js/main.js
+public/js/manifest.edn
