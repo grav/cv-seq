@@ -25,7 +25,7 @@
 
 (def n 10)
 
-(defn sequence-view [{:keys [steps on-steps-changed step-playing]}]
+(defn sequence-view [{:keys [beat steps on-steps-changed]}]
   [:div {:style {:display :flex}}
    (for [[i s] (map vector (range) steps)]
      ^{:key i}
@@ -38,7 +38,7 @@
 
         ^{:key j}
         [block {:selected selected
-                :playing (= i step-playing)
+                :playing (= i (mod beat (count steps)))
                 :on-select #(on-steps-changed (assoc steps i (/ j 10)))}])])])
 
 

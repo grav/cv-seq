@@ -4,7 +4,7 @@
             [example.seq :as seq]
             [clojure.pprint]))
 
-(def n-steps 8)
+(def n-steps 16)
 
 (defonce !app-state (r/atom {:steps (vec (repeat n-steps 0))
                              :ctx nil}))
@@ -19,7 +19,7 @@
         _ (set! (.-type osc) "sine")
         _ (.setValueAtTime (.-frequency osc) 8 (.-currentTime ctx))
         gain (.createGain ctx)
-        _ (.setValueAtTime (.-gain gain) 0.5 (.-currentTime ctx))
+        _ (.setValueAtTime (.-gain gain) 1 #_0.5 (.-currentTime ctx))
 
         scriptNode (.createScriptProcessor ctx 4096 1 1)
         _ (set! (.-onaudioprocess scriptNode) (js/algebra #(+ 0.5 %)))]
@@ -32,7 +32,7 @@
 
 (defn app []
   [:div
-   (let [{:keys [playing steps ctx]} @!app-state]
+   (let [{:keys [playing steps ctx beat]} @!app-state]
      (println 'ctx ctx)
      (if ctx
        [:div
@@ -41,14 +41,15 @@
                               (seq/play-repeatedly
                                 {:now-fn (fn [] (.now (.-performance js/window)))
                                  :ding (fn [[_ _ v t]]
-                                         (let [{:keys [ctx osc]} @!app-state]
+                                         (let [{:keys [ctx osc]} @!app-state
+                                               f (-> (* 200 v)
+                                                     (+ 0))]
                                            (.setValueAtTime (.-frequency osc)
-                                                            (-> (* 440 v)
-                                                                (+ 440))
+                                                            f
                                                             t)
-                                           (println 'current-time (.-currentTime ctx))
+                                           (println 'v v 'f f 't t)
                                            #_#__ (.setValueAtTime (.-gain the-gain) 0.5 t)
-                                           (print v t)))
+                                           #_(print v t)))
                                  :on-update-beat (fn [%]
                                                    (swap! !app-state assoc :beat %))
                                  :seq-transform (fn [seq]
@@ -60,6 +61,7 @@
                                  :time 0}))
                   :disabled playing} "Start"]
         [v/sequence-view {:steps steps
+                          :beat beat
                           :step-playing 2
                           :on-steps-changed #(swap! !app-state assoc :steps %)}]]
        [:button {:on-click (fn []
