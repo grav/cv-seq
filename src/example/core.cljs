@@ -30,25 +30,28 @@
     (.start osc)
     (swap! !app-state assoc :ctx ctx :osc osc)))
 
+(def ding
+  (fn [[_ _ v t]]
+    (let [{:keys [_ctx osc]} @!app-state
+          #_#_n (* 10 v)]
+      (.setValueAtTime (.-frequency osc)
+                       (-> (js/Math.pow 2 (/ v 12))
+                           (* 330))
+                       t)
+      #_(println 'current-time (.-currentTime ctx))
+      #_#__ (.setValueAtTime (.-gain the-gain) 0.5 t)
+      #_(print v t))))
+
 (defn app []
   [:div
    (let [{:keys [playing steps ctx]} @!app-state]
-     (println 'ctx ctx)
      (if ctx
        [:div
         [:button {:on-click (fn []
                               (swap! !app-state assoc :playing true)
                               (seq/play-repeatedly
                                 {:now-fn (fn [] (.now (.-performance js/window)))
-                                 :ding (fn [[_ _ v t]]
-                                         (let [{:keys [ctx osc]} @!app-state]
-                                           (.setValueAtTime (.-frequency osc)
-                                                            (-> (* 440 v)
-                                                                (+ 440))
-                                                            t)
-                                           (println 'current-time (.-currentTime ctx))
-                                           #_#__ (.setValueAtTime (.-gain the-gain) 0.5 t)
-                                           (print v t)))
+                                 :ding #'ding
                                  :on-update-beat (fn [%]
                                                    (swap! !app-state assoc :beat %))
                                  :seq-transform (fn [seq]
@@ -60,7 +63,7 @@
                                  :time 0}))
                   :disabled playing} "Start"]
         [v/sequence-view {:steps steps
-                          :step-playing 2
+                          :step-playing nil
                           :on-steps-changed #(swap! !app-state assoc :steps %)}]]
        [:button {:on-click (fn []
                              (setup-ctx!))}
@@ -71,8 +74,8 @@
 
 (defn ^:dev/after-load main []
   (let [{:keys [ctx]} @!app-state]
-    (when ctx
-      (setup-ctx!)))
+    #_(when ctx
+        (setup-ctx!)))
   (r/render [app] (js/document.getElementById "app")))
 
 

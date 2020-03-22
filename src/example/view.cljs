@@ -23,14 +23,14 @@
              :on-mouse-over #(reset! !lstate true)
              :on-mouse-out #(reset! !lstate false)}])))
 
-(def n 10)
+(def n 13)
 
 (defn sequence-view [{:keys [steps on-steps-changed step-playing]}]
   [:div {:style {:display :flex}}
    (for [[i s] (map vector (range) steps)]
      ^{:key i}
      [:div
-      (for [[j selected] (->> (concat (repeat (inc (* s n)) true)
+      (for [[j selected] (->> (concat (repeat (inc (* s 1)) true)
                                       (repeat false))
                               (take n)
                               (map vector (range))
@@ -39,7 +39,7 @@
         ^{:key j}
         [block {:selected selected
                 :playing (= i step-playing)
-                :on-select #(on-steps-changed (assoc steps i (/ j 10)))}])])])
+                :on-select #(on-steps-changed (assoc steps i j))}])])])
 
 
 

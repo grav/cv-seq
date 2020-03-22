@@ -41,7 +41,7 @@
      :time time'
      :sequences sequences}))
 
-(def latency 1)
+(def latency 0.1)
 
 #_(defn ding [args]
     (print 'ding args))
