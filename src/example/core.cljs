@@ -32,13 +32,13 @@
 
 (def ding
   (fn [[_ _ v t]]
-    (let [{:keys [_ctx osc gain]} @!app-state
+    (let [{:keys [ctx osc gain]} @!app-state
           #_#_n (* 10 v)]
       (.setValueAtTime (.-frequency osc)
                        (-> (js/Math.pow 2 (/ v 12))
                            (* 330))
                        t)
-      #_(println 'current-time (.-currentTime ctx))
+      (println 'current-time (.-currentTime ctx) 't t)
       (.setValueAtTime (.-gain gain) 0.0 t)
       (.linearRampToValueAtTime (.-gain gain) 0.5 (+ t 0.01))
       (.linearRampToValueAtTime (.-gain gain) 0.0 (+ t 0.1))
