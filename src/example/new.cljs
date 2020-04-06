@@ -15,10 +15,10 @@
   (-> (* bps t)
       js/Math.ceil))
 
-(def s ['c2 'd2 'e2 'f2 'g2 'a2 'b2 'c3])
+(defn s []
+      ['c2 'd2 'e2 'f2 'g2 'a2 'b2 'c3])
 
-(def s' (->> (repeatedly (fn []
-                           s))
+(def s' (->> (repeatedly #'s)
              (apply concat)))
 
 (defn play [t v]
