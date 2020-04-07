@@ -4,8 +4,6 @@
 
 (def bps (/ bpm 60))
 
-(def n-steps 8)
-
 (def steps-per-beat 4)
 
 (defn step-no->time [n]
@@ -16,13 +14,10 @@
       js/Math.ceil))
 
 (defn s []
-      ['c2 'd2 'e2 'f2 'g2 'a2 'b2 'c3])
+      ['c4 'g3 'e3 'f#3 'g3 'a3 'b3 'c4])
 
 (def s' (->> (repeatedly #'s)
              (apply concat)))
-
-(defn play [t v]
-  (js/console.log 't t 'v v))
 
 (def look-ahead 0.5)
 
@@ -37,7 +32,7 @@
 
   (let [ctx (js/window.AudioContext.)
         osc (.createOscillator ctx) #_(.createConstantSource ctx)
-        _ (set! (.-type osc) "sine")
+        _ (set! (.-type osc) "square")
         _ (.setValueAtTime (.-frequency osc) 8 (.-currentTime ctx))
         gain (.createGain ctx)
         _ (.setValueAtTime (.-gain gain) 0.5 (.-currentTime ctx))
@@ -65,38 +60,34 @@
     (-> (get fs note)
         (* (js/Math.pow 2 (- oct 3))))))
 
+(defn step->freq [n]
+  (-> (js/Math.pow 2 (/ n 12))
+      (* 330)))
 
 (def ding
-  (fn [[_ _ v t]]
-    (let [{:keys [ctx osc gain]} @!state
-          #_#_n (* 10 v)]138.59
-      (.setValueAtTime (.-frequency osc)
-                       (-> (js/Math.pow 2 (/ v 12))
-                           (* 330))
-                       t)
-      (println 'current-time (.-currentTime ctx) 't t)
+  (fn [f t]
+    (let [{:keys [osc gain]} @!state]
+      (.setValueAtTime (.-frequency osc) f)
+
       (.setValueAtTime (.-gain gain) 0.0 t)
       (.linearRampToValueAtTime (.-gain gain) 0.5 (+ t 0.01))
-      (.linearRampToValueAtTime (.-gain gain) 0.0 (+ t 0.1))
-      #_(.setValueAtTime (.-gain))
-      #_(print v t))))
+      (.linearRampToValueAtTime (.-gain gain) 0.0 (+ t 0.1)))))
 
 (defn start []
+  (setup-ctx!)
   (reset! !start true)
   (let [start-t (js/performance.now)
-        f (fn f [last-t es]
-            (println 'last-t last-t 'i (time->next-step last-t))
+        f (fn f [es]
             (let [now (/ (- (js/performance.now) start-t)
                          1000)
                   notes (->> es
                              (take-while (fn [[idx _]]
                                            (< (step-no->time idx) (+ now look-ahead)))))]
-              (println 'now now 'notes notes)
-              #_(doseq [n notes]
-                  (ding))
+              (doseq [[b n] notes]
+                (ding (note->freq n) (step-no->time b)))
               (when @!start
-                (js/setTimeout #(f now (drop (count notes) es))
+                (js/setTimeout #(f (drop (count notes) es))
                                (* 1000 look-ahead)))))]
-    (f 0 (map vector (range) s'))))
+    (f (map vector (range) s'))))
 
 
