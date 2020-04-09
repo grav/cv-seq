@@ -67,7 +67,7 @@
 (def ding
   (fn [f t]
     (let [{:keys [osc gain]} @!state]
-      (.setValueAtTime (.-frequency osc) f)
+      (.setValueAtTime (.-frequency osc) f t)
 
       (.setValueAtTime (.-gain gain) 0.0 t)
       (.linearRampToValueAtTime (.-gain gain) 0.5 (+ t 0.01))
