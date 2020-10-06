@@ -1,5 +1,7 @@
 {:paths ["src"]
- :deps {reagent/reagent {:mvn/version "0.9.1"}}
+ :deps {org.clojure/clojurescript {:mvn/version "1.10.597"}
+        reagent/reagent {:mvn/version "0.9.1"}
+        cljs-bean/cljs-bean {:mvn/version "1.5.0"}}
 
  :aliases {:cljs
            {:extra-deps {org.clojure/clojurescript {:mvn/version "1.10.597"}
