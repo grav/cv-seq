@@ -44,11 +44,61 @@
   (+ (* (current-beat bpm)
         (bpm->secs-per-beat bpm))
      (bpm->secs-per-beat bpm)
+     (/ origin 1000)))
+
+(defn next-bar [bpm beats-per-bar]
+  (+ (* (current-beat bpm)
+        (bpm->secs-per-beat bpm))
+     (bpm->secs-per-beat bpm)
      origin))
+
+(defn note->data1 [note]
+  (let [[a b c d] (name note)
+        oct (-> (cond (and (= b "-")
+                           (nil? d))
+                      (str b c)
+                      c
+                      (str c d)
+                      :else
+                      (str b))
+                js/parseInt)
+        note-val (cond-> (get {"c" 0 "d" 2 "e" 4 "f" 5 "g" 7 "a" 9 "b" 11} a)
+                         (= b "#") inc)]
+    (-> (+ 2 oct)
+        (* 12)
+        (+ note-val))))
+
+
+(defn note->midi-message [note
+                          {:keys [length
+                                  velocity
+                                  offset
+                                  secs-per-bar
+                                  sustain]}]
+  (let [note-val (note->data1 note)]
+    [{:type :note-on
+      :time offset
+      :data1 note-val
+      :data2 (int (* velocity 128))}
+     {:type :note-off
+      :time (+ offset
+               (* length secs-per-bar sustain))
+      :data1 note-val
+      :data2 0}]))
+
 
 (comment
   (let [channel 0]
-           (.send @!output #js[(+ channel note-on)
-                               42
-                               0x7f]
-                  (next-beat 120))))
+    (doseq [{:keys [type data1 data2 time]} (note->midi-message
+                                              :c2
+                                              {:length 0.1
+                                               :velocity 0.8
+                                               :offset (next-beat 120)
+                                               :secs-per-bar (* 4 (bpm->secs-per-beat 120))
+                                               :sustain 0.9})]
+      (let [status (+ (get {:note-on note-on
+                            :note-off note-off}
+                           type)
+                      channel)]
+        (.send @!output #js[status data1 data2]
+                     (* 1000 time))))))
