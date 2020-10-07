@@ -73,35 +73,52 @@
                           {:keys [length
                                   velocity
                                   offset
-                                  secs-per-bar
+                                  tempo
                                   sustain]}]
-  (let [note-val (note->data1 note)]
+  (let [secs-per-beat (bpm->secs-per-beat tempo)
+        note-val (note->data1 note)]
     [{:type :note-on
       :time offset
       :data1 note-val
-      :data2 (int (* velocity 128))}
+      :data2 (int (* (or velocity 0.5) 128))}
      {:type :note-off
       :time (+ offset
-               (* length secs-per-bar sustain))
+               (* (or length (/ 1 16)) 4 secs-per-beat (or sustain 0.9)))
       :data1 note-val
       :data2 0}]))
 
+(defn sequence->notes [seq {:keys [length velocity tempo offset]}]
+  (assert (and tempo offset) "Must set tempo and offset!")
+  (->> seq
+       (reduce (fn [{:keys [notes] :as args} n]
+                 (let [offset' (get args :offset offset)]
+                   {:notes (concat notes
+                                   (when n
+                                     (note->midi-message n
+                                                         {:length length
+                                                          :velocity velocity
+                                                          :tempo tempo
+                                                          :offset offset'})))
+                    :offset (+ (/ (bpm->secs-per-beat tempo)
+                                  4)
+                               offset')})))
+       :notes))
 
-(comment
+(defn play-notes [notes]
   (let [channel 0]
-    (doseq [{:keys [type data1 data2 time]} (note->midi-message
-                                              :c2
-                                              {:length 0.1
-                                               :velocity 0.8
-                                               :offset (next-beat 120)
-                                               :secs-per-bar (* 4 (bpm->secs-per-beat 120))
-                                               :sustain 0.9})]
+    (doseq [{:keys [type data1 data2 time]} notes]
       (let [status (+ (get {:note-on note-on
                             :note-off note-off}
                            type)
                       channel)]
         (.send @!output #js[status data1 data2]
                      (* 1000 time))))))
+
+(comment
+  (-> [:c2 :c2 :e2 :c2 :g2 nil :c3 :c3 :b2 :a2 :g2]
+      (sequence->notes {:tempo 120
+                        :offset (next-beat 120)})
+      play-notes))
 
 ;;; fluidsynth
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
