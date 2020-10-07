@@ -40,17 +40,18 @@
 (defn bpm->secs-per-beat [bpm]
   (/ 60 bpm))
 
-(defn next-beat [bpm]
-  (+ (* (current-beat bpm)
-        (bpm->secs-per-beat bpm))
-     (bpm->secs-per-beat bpm)
-     (/ origin 1000)))
-
 (defn next-bar [bpm beats-per-bar]
-  (+ (* (current-beat bpm)
-        (bpm->secs-per-beat bpm))
-     (bpm->secs-per-beat bpm)
-     origin))
+  (let [current-b (current-beat bpm)
+        m (mod current-b beats-per-bar)
+        n (if (zero? m) beats-per-bar
+                        (- beats-per-bar m))]
+    (+ (* current-b
+          (bpm->secs-per-beat bpm))
+       (* n (bpm->secs-per-beat bpm))
+       (/ origin 1000))))
+
+(defn next-beat [bpm]
+  (next-bar bpm 1))
 
 (defn note->data1 [note]
   (let [[a b c d] (name note)
@@ -118,7 +119,7 @@
 (comment
   (-> [:c2 :c2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
       (sequence->notes {:tempo 120
-                        :offset (next-beat 120)})
+                        :offset (next-bar 120 4)})
       play-notes))
 
 ;;; fluidsynth
