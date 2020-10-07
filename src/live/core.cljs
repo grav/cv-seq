@@ -43,8 +43,7 @@
 (defn next-bar [bpm beats-per-bar]
   (let [current-b (current-beat bpm)
         m (mod current-b beats-per-bar)
-        n (if (zero? m) beats-per-bar
-                        (- beats-per-bar m))]
+        n (- beats-per-bar m)]
     (+ (* current-b
           (bpm->secs-per-beat bpm))
        (* n (bpm->secs-per-beat bpm))
@@ -88,7 +87,7 @@
       :data1 note-val
       :data2 0}]))
 
-(defn sequence->notes [seq {:keys [length velocity tempo offset]}]
+(defn sequence->notes [{:keys [length velocity tempo offset]} seq]
   (assert (and tempo offset) "Must set tempo and offset!")
   (->> seq
        (reduce (fn [{:keys [notes] :as args}  n]
@@ -117,8 +116,10 @@
                      (* 1000 time))))))
 
 (comment
-  (-> [:c2 :c2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
-      (sequence->notes {:tempo 120
+  (->> [[:c2 :c2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
+        [:e3 nil :f3 :d3 :e3 nil :c3 :d3 :e3 :f3 :d3 :g3 :e3]]
+       rand-nth
+       (sequence->notes {:tempo 120
                         :offset (next-bar 120 4)})
       play-notes))
 
