@@ -102,3 +102,6 @@
                       channel)]
         (.send @!output #js[status data1 data2]
                      (* 1000 time))))))
+
+;;; fluidsynth
+;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
