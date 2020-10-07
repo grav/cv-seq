@@ -90,7 +90,7 @@
 (defn sequence->notes [seq {:keys [length velocity tempo offset]}]
   (assert (and tempo offset) "Must set tempo and offset!")
   (->> seq
-       (reduce (fn [{:keys [notes] :as args} n]
+       (reduce (fn [{:keys [notes] :as args}  n]
                  (let [offset' (get args :offset offset)]
                    {:notes (concat notes
                                    (when n
@@ -101,7 +101,8 @@
                                                           :offset offset'})))
                     :offset (+ (/ (bpm->secs-per-beat tempo)
                                   4)
-                               offset')})))
+                               offset')}))
+               nil)
        :notes))
 
 (defn play-notes [notes]
@@ -115,7 +116,7 @@
                      (* 1000 time))))))
 
 (comment
-  (-> [:c2 :c2 :e2 :c2 :g2 nil :c3 :c3 :b2 :a2 :g2]
+  (-> [:c2 :c2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
       (sequence->notes {:tempo 120
                         :offset (next-beat 120)})
       play-notes))
