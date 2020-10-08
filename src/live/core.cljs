@@ -161,21 +161,29 @@
        (repeat 2)
        (apply concat)))
 
+(defn funk-clap2 []
+  (->> [[nil nil :d#1 :d#1 nil nil :d#1 nil]
+        [:d#1 :d#1 nil :d#1 nil nil :d#1 nil]]
+       rand-nth
+       (repeat 2)
+       (apply concat)))
+
 (defn bd []
   (->> [:c1 nil nil nil]
        (repeat 4)
        (apply concat)))
 
 (defn hihats []
-  (->> [:f#1 :f#1 :a#1 :f#1]
-       (repeat 4)
-       (apply concat)))
+  []#_ (->> [:f#1 :f#1 :a#1 :f#1]
+            (repeat 4)
+            (apply concat)))
 
 (defn bass []
-  (apply concat (repeat 2 [:c1 nil nil :c1 nil nil :c1 nil])))
+  (apply concat (repeat 2 [:c1 :g1 nil :d#2 nil nil :c1 nil])))
 
 
 (defn my-notes []
+
   (->> [[:c2 :g2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
         [:g3 nil :f3 :d3 :e3 nil :c3 :d3 :e3 :f3 :d3 :g3 :e3]]
        rand-nth))
@@ -191,7 +199,7 @@
           :tempo 120
           :loop-length 4
           :channel 0}
-         #'melody))
+         #'my-notes))
 
 ;;; fluidsynth
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
