@@ -36,6 +36,8 @@
       (* bpm)
       int))
 
+(def latency 0.5)
+
 
 (defn bpm->secs-per-beat [bpm]
   (/ 60 bpm))
@@ -105,7 +107,7 @@
                nil)
        :notes))
 
-(defn play-notes [notes]
+(defn play-notes! [notes]
   (let [channel 0]
     (doseq [{:keys [type data1 data2 time]} notes]
       (let [status (+ (get {:note-on note-on
@@ -115,13 +117,25 @@
         (.send @!output #js[status data1 data2]
                      (* 1000 time))))))
 
-(comment
+(defn schedule! [notes-fn offset]
+  (let [now (js/performance.now)
+        delay (max 0 (- offset now (* 1000 latency)))]
+    (js/setTimeout (fn []
+                     (play-notes! (notes-fn offset)))
+                   delay)))
+
+#_(defn loop! [notes-fn]
+  (schedule! (notes-fn)))
+
+(defn my-notes [offset]
   (->> [[:c2 :c2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
         [:e3 nil :f3 :d3 :e3 nil :c3 :d3 :e3 :f3 :d3 :g3 :e3]]
        rand-nth
        (sequence->notes {:tempo 120
-                        :offset (next-bar 120 4)})
-      play-notes))
+                         :offset offset})))
+
+(comment
+  (schedule! my-notes (next-bar 120 4)))
 
 ;;; fluidsynth
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
