@@ -10,11 +10,12 @@
 
 (def vol 0x7f)
 
-(defonce !output (atom nil))
+(defonce !app-state (atom {:tempo 120
+                           :output nil}))
 
 (defonce origin (.now js/performance))
 
-(defn save-output []
+(defn get-output-p []
   (-> (.requestMIDIAccess js/navigator)
       (.then (fn [m]
                (->> m
@@ -23,8 +24,7 @@
                     es6-iterator-seq
                     (filter #(str/starts-with?
                                (.-name %) output-name-prefix))
-                    first)))
-      (.then #(reset! !output %))))
+                    first)))))
 
 (defn duration []
   (/ (- (.now js/performance) origin)
@@ -104,110 +104,98 @@
                                                           :velocity velocity
                                                           :tempo tempo
                                                           :offset offset'
-                                                          :channel channel})))
+                                                          :channel (or channel 0)})))
                     :offset (+ (/ (bpm->secs-per-beat tempo)
                                   4)
                                offset')}))
                nil)
        :notes))
 
-(defn play-notes! [notes]
-  (println 'play-notes!)
-  (doseq [{:keys [type data1 data2 time channel]} notes]
+(defn play-notes! [{:keys [tempo offset channel output] :as args} notes]
+  (doseq [{:keys [type data1 data2 time channel]} (sequence->notes
+                                                    {:tempo tempo
+                                                     :offset offset
+                                                     :channel channel}
+                                                    notes)]
     (let [status (+ (get {:note-on note-on
                           :note-off note-off}
                          type)
                     (or channel 0))]
-      (.send @!output #js[status data1 data2]
+      (.send (or output (:output @!app-state))
+             #js[status data1 data2]
              (* 1000 time)))))
 
-(defn schedule! [notes-fn offset]
-  (let [now (js/performance.now)
-        delay (max 0 (- (* 1000 offset) now (* 1000 latency)))]
-    (println 'delay delay)
-    (js/setTimeout (fn []
-                     (play-notes! (notes-fn offset)))
-                   delay)))
 
-(defn loop! [notes-fn {:keys [offset bpm loop-length]}]
+#_(defn schedule! [notes-fn offset]
+    (let [now (js/performance.now)
+          delay (max 0 (- (* 1000 offset) now (* 1000 latency)))]
+      (println 'delay delay)
+      (js/setTimeout (fn []
+                       (play-notes! {} (notes-fn offset)))
+                     delay)))
+
+(defn loop! [{:keys [offset tempo loop-length] :as args} notes-fn]
   (let [now (js/performance.now)
         delay (max 0 (- (* 1000 offset) now (* 1000 latency)))
         next-offset (+ offset
-                       (* (bpm->secs-per-beat bpm) loop-length))]
-
+                       (* (bpm->secs-per-beat tempo) loop-length))]
+    (println 'delay delay)
     (js/setTimeout (fn []
-                     (play-notes! (notes-fn offset))
-                     (loop! notes-fn
-                            {:offset next-offset
-                             :bpm bpm
-                             :loop-length loop-length}))
+                     (play-notes! args
+                                  (notes-fn))
+                     (loop! (assoc args :offset next-offset)
+                            notes-fn))
+
                    delay)))
 
-(defn funk [offset]
-
-  (sequence->notes
-
-    {:tempo 120
-     :offset offset
-     :channel 9}
-    (->> [nil nil nil nil :d1 nil nil nil]
-         (repeat 2)
-         (apply concat))))
-
-(defn funk-clap [offset]
-  (sequence->notes
-    {:tempo 120
-     :offset offset
-     :channel 9}
-    (->> [[nil nil nil :d#1 nil nil :d#1 nil]
-          [nil :d#1 nil :d#1 nil nil :d#1 nil]]
-         rand-nth
-         (repeat 2)
-         (apply concat))))
-
-(defn bd [offset]
-  (sequence->notes
-
-    {:tempo 120
-     :offset offset
-     :channel 9}
-    (->> [:c1 nil nil nil]
-         (repeat 4)
-         (apply concat))))
+(defn funk []
+  (->> [nil nil nil nil :d1 nil nil nil]
+       (repeat 2)
+       (apply concat)))
 
 
-(defn hihats [offset]
+(defn funk-clap []
+  (->> [[nil nil nil :d#1 nil nil :d#1 nil]
+        [nil :d#1 nil :d#1 nil nil :d#1 nil]]
+       rand-nth
+       (repeat 2)
+       (apply concat)))
 
-  (sequence->notes
+(defn bd []
+  (->> [:c1 nil nil nil]
+       (repeat 4)
+       (apply concat)))
 
-    {:tempo 120
-     :offset offset
-     :channel 9}
-    (->> [:f#1 :f#1 :a#1 :f#1]
-         (repeat 4)
-         (apply concat))))
+(defn hihats []
+  (->> [:f#1 :f#1 :a#1 :f#1]
+       (repeat 4)
+       (apply concat)))
 
-(defn bass [offset]
-  (sequence->notes
-    {:tempo 120
-     :offset offset
-     :channel 0}
-    (apply concat (repeat 2 [:c1 nil nil :c1 nil nil :c1 nil]))))
+(defn bass []
+  (apply concat (repeat 2 [:c1 nil nil :c1 nil nil :c1 nil])))
 
-(defn my-notes [offset]
+
+(defn my-notes []
   (->> [[:c2 :g2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
         [:g3 nil :f3 :d3 :e3 nil :c3 :d3 :e3 :f3 :d3 :g3 :e3]]
-       rand-nth
-       (sequence->notes {:tempo 120
-                         :offset offset})))
+       rand-nth))
+
+(defn melody []
+  [:g4 nil nil :c4 nil nil :d#4 nil :g4 nil :c4 nil :g#4 nil :c4 nil])
 
 (comment
   (schedule! my-notes (next-bar 120 4)))
 
 (comment
-  (loop! #'funk-clap {:offset (next-bar 120 4)
-                              :bpm 120
-                              :loop-length 4}))
+  (loop! {:offset (next-bar 120 4)
+          :tempo 120
+          :loop-length 4
+          :channel 0}
+         #'melody))
 
 ;;; fluidsynth
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
+
+(defn ^:export init []
+  (-> (get-output-p)
+      (.then #(swap! !app-state assoc :output %))))
