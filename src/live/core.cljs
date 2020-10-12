@@ -135,18 +135,22 @@
                        (play-notes! {} (notes-fn offset)))
                      delay)))
 
-(defn loop! [{:keys [offset tempo loop-length] :as args} notes-fn]
+(defn loop! [{:keys [offset tempo loop-length id channel] :as args
+              :or {id (random-uuid)}} notes-fn-var]
+  (assert (var? notes-fn-var) "Supplied function needs to be a var")
   (let [now (js/performance.now)
         delay (max 0 (- (* 1000 offset) now (* 1000 latency)))
         next-offset (+ offset
                        (* (bpm->secs-per-beat tempo) loop-length))]
-    (js/setTimeout (fn []
-                     (play-notes! args
-                                  (notes-fn))
-                     (loop! (assoc args :offset next-offset)
-                            notes-fn))
-
-                   delay)))
+    (swap! !app-state assoc id
+           {:channel channel
+            :function (:name (meta notes-fn-var))
+            :callback-id (js/setTimeout (fn []
+                                          (play-notes! args
+                                                       (notes-fn-var))
+                                          (loop! (assoc args :offset next-offset :id id)
+                                                 notes-fn-var))
+                                        delay)})))
 
 (defn funk []
   (->> (fn [] [nil nil nil nil :d1 nil nil (rand-nth [nil :d1])])
@@ -206,12 +210,14 @@
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :loop-length 4
-          :channel 9}
-         #'funk))
+          :channel 0}
+         #'bass))
+;; => nil
+;; => nil
 
 ;;; fluidsynth
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
 
 (defn ^:export init []
-  (-> (get-output-p "TORAIZ")
+  (-> (get-output-p "E")
       (.then #(swap! !app-state assoc :output %))))
