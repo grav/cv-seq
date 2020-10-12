@@ -1,6 +1,7 @@
 (ns live.core
   (:require [clojure.string :as str]
             [cljs-bean.core :refer [bean]]
+            [reagent.core :as r]
             [clojure.pprint]))
 
 (def output-name-prefix "Synth input port")
@@ -11,8 +12,8 @@
 
 (def vol 0x7f)
 
-(defonce !app-state (atom {:tempo 120
-                           :output nil}))
+(defonce !app-state (r/atom {:tempo 120
+                             :output nil}))
 
 (defonce origin (.now js/performance))
 
@@ -142,7 +143,7 @@
         delay (max 0 (- (* 1000 offset) now (* 1000 latency)))
         next-offset (+ offset
                        (* (bpm->secs-per-beat tempo) loop-length))]
-    (swap! !app-state assoc id
+    (swap! !app-state assoc-in [:sequences id]
            {:channel channel
             :function (:name (meta notes-fn-var))
             :callback-id (js/setTimeout (fn []
@@ -160,10 +161,13 @@
 
 (defn funk-clap []
   (->> [[nil nil nil :d#1 nil nil :d#1 nil]
-        #_[nil :d#1 nil :d#1 nil nil :d#1 nil]]
+        [:a#0 nil nil :d#1 nil nil :d#1 nil]]
        rand-nth
        (repeat 2)
        (apply concat)))
+
+(defn pad []
+  [nil nil (rand-nth [:c1 :g0])])
 
 (defn funk-clap2 []
   [] #_(->> [[nil nil :d#1 :d#1 nil nil :d#1 nil]
@@ -173,12 +177,11 @@
             (apply concat)))
 
 (defn bd []
-  (->> [:c1 nil nil nil]
-       (repeat 4)
-       (apply concat)))
+  (->> [:c1 nil nil :c1 nil nil :c1 nil nil nil nil :c1 nil nil :c1]
+       ))
 
 (defn hihats []
-  (->> (fn [] [:f#1 :f#1 (rand-nth [:f#1 :a#1]) :f#1])
+  (->> (fn [] [nil nil :c#1 nil])
        (repeatedly 4)
        (apply concat)))
 
@@ -194,6 +197,9 @@
 (defn chord3 []
   [:c5 nil nil :c5 nil nil :c5 nil nil :c5 nil nil :c5 nil :c5 nil])
 
+(defn snare []
+  (concat (repeat 12 nil) [:c1]))
+
 (defn my-notes []
 
   (->> [[:c2 :g2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
@@ -206,14 +212,18 @@
 (comment
   (schedule! my-notes (next-bar 120 4)))
 
+(defn arp1 []
+  (let [es [:c1 :g1 :a#1 :d2 :d#2]]
+    (concat es (drop 1 (reverse (drop 1 es))))))
+
 (comment
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :loop-length 4
-          :channel 0}
-         #'bass))
-;; => nil
-;; => nil
+          :channel 3}
+         #'hihats))
+
+
 
 ;;; fluidsynth
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
@@ -221,3 +231,31 @@
 (defn ^:export init []
   (-> (get-output-p "E")
       (.then #(swap! !app-state assoc :output %))))
+
+(defn sequence-view [id {{:keys [function channel]} :sequence
+                         :keys [on-click]}]
+  [:div
+   {:style {:margin 2
+            :cursor :pointer
+            :background :gray}
+    :on-click (fn []
+                (on-click id))}
+   (str function " #" channel "")])
+
+(defn stop-sequence! [id]
+  (let [{:keys [callback-id]} (get-in @!app-state [:sequences id])]
+    (js/clearTimeout callback-id)
+    (swap! !app-state update :sequences dissoc id)))
+
+(defn app []
+  [:div "Sequences"
+   [:div
+    (for [[id sequence] (:sequences @!app-state)]
+      ^{:key id} [sequence-view id {:sequence sequence
+                                    :on-click stop-sequence! }])]])
+
+(defn ^:dev/after-load main []
+  (let [{:keys [ctx]} @!app-state]
+    #_(when ctx
+      (setup-ctx!)))
+  (r/render [app] (js/document.getElementById "app")))
