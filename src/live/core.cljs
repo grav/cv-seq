@@ -1,8 +1,9 @@
-(ns live.core
+(ns ^:dev/once live.core
   (:require [clojure.string :as str]
             [cljs-bean.core :refer [bean]]
             [reagent.core :as r]
-            [clojure.pprint]))
+            [clojure.pprint]
+            [live.views :as views]))
 
 (def output-name-prefix "Synth input port")
 
@@ -177,8 +178,13 @@
             (apply concat)))
 
 (defn bd []
-  (->> [:c1 nil nil :c1 nil nil :c1 nil nil nil nil :c1 nil nil :c1]
-       ))
+  (->> [:c1 nil nil :c1 nil nil :c1 nil nil nil nil :c1 nil nil :c1]))
+
+(defn bd2 []
+  (->> [:c1 nil nil nil]
+       (repeat 5)
+       (apply concat)))
+
 
 (defn hihats []
   (->> (fn [] [nil nil :c#1 nil])
@@ -198,7 +204,7 @@
   [:c5 nil nil :c5 nil nil :c5 nil nil :c5 nil nil :c5 nil :c5 nil])
 
 (defn snare []
-  (concat (repeat 12 nil) [:c1]))
+  (concat (repeat 4 nil) [:c1]))
 
 (defn my-notes []
 
@@ -216,46 +222,34 @@
   (let [es [:c1 :g1 :a#1 :d2 :d#2]]
     (concat es (drop 1 (reverse (drop 1 es))))))
 
+(defn bass2 []
+  [nil :c0 nil :c0 nil nil nil :c1 nil nil nil :c0 nil :d#2 :c2 :c1])
+
 (comment
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :loop-length 4
-          :channel 3}
-         #'hihats))
-
+          :channel 6}
+         #'bd2))
 
 
 ;;; fluidsynth
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
 
-(defn ^:export init []
+(defn init []
   (-> (get-output-p "E")
       (.then #(swap! !app-state assoc :output %))))
 
-(defn sequence-view [id {{:keys [function channel]} :sequence
-                         :keys [on-click]}]
-  [:div
-   {:style {:margin 2
-            :cursor :pointer
-            :background :gray}
-    :on-click (fn []
-                (on-click id))}
-   (str function " #" channel "")])
+
 
 (defn stop-sequence! [id]
   (let [{:keys [callback-id]} (get-in @!app-state [:sequences id])]
     (js/clearTimeout callback-id)
     (swap! !app-state update :sequences dissoc id)))
 
-(defn app []
-  [:div "Sequences"
-   [:div
-    (for [[id sequence] (:sequences @!app-state)]
-      ^{:key id} [sequence-view id {:sequence sequence
-                                    :on-click stop-sequence! }])]])
 
-(defn ^:dev/after-load main []
-  (let [{:keys [ctx]} @!app-state]
-    #_(when ctx
-      (setup-ctx!)))
-  (r/render [app] (js/document.getElementById "app")))
+
+(defn ^:export main []
+  (init)
+  (views/render-app {:!app-state !app-state
+                     :stop-sequence stop-sequence!}))
