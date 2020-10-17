@@ -1,5 +1,6 @@
 (ns live.views
-  (:require [reagent.core :as r]))
+  (:require [reagent.core :as r]
+            [live.core]))
 
 (defn sequence-view [id {{:keys [function channel]} :sequence
                          :keys [on-click]}]
@@ -18,6 +19,7 @@
      ^{:key id} [sequence-view id {:sequence sequence
                                    :on-click stop-sequence}])]])
 
-(defn render-app [{:keys [!app-state stop-sequence]}]
-  (r/render [app {:!app-state !app-state
-                  :stop-sequence stop-sequence}] (js/document.getElementById "app")))
+(defn ^:export main []
+  (r/render [app {:!app-state live.core/!app-state
+                  :stop-sequence live.core/stop-sequence!}]
+            (js/document.getElementById "app")))

@@ -1,9 +1,8 @@
-(ns ^:dev/once live.core
+(ns live.core
   (:require [clojure.string :as str]
             [cljs-bean.core :refer [bean]]
             [reagent.core :as r]
-            [clojure.pprint]
-            [live.views :as views]))
+            [clojure.pprint]))
 
 (def output-name-prefix "Synth input port")
 
@@ -225,12 +224,7 @@
 (defn bass2 []
   [nil :c0 nil :c0 nil nil nil :c1 nil nil nil :c0 nil :d#2 :c2 :c1])
 
-(comment
-  (loop! {:offset (next-bar 120 4)
-          :tempo 120
-          :loop-length 4
-          :channel 6}
-         #'bd2))
+
 
 
 ;;; fluidsynth
@@ -241,15 +235,7 @@
       (.then #(swap! !app-state assoc :output %))))
 
 
-
 (defn stop-sequence! [id]
   (let [{:keys [callback-id]} (get-in @!app-state [:sequences id])]
     (js/clearTimeout callback-id)
     (swap! !app-state update :sequences dissoc id)))
-
-
-
-(defn ^:export main []
-  (init)
-  (views/render-app {:!app-state !app-state
-                     :stop-sequence stop-sequence!}))
