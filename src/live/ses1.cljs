@@ -13,17 +13,22 @@
 
 (defn bassic1
   []
-  (->> [nil nil :c1 :c1 :c1 :c1 :c2 :c2]))
+  (->> [:d0 nil :d1 :d1 :d1 :d1 :d2 :d2 nil nil nil :d1 nil nil :d1]))
 
 (defn bassic2
   []
-  (->> [nil nil nil nil :c1 nil nil :c1 :nil :c1]))
+  (->> [nil nil nil nil :c1 nil nil :c1 nil :c1]))
 
 (defn hh1 []
-  (->> [nil nil :c1 nil]
-       (repeat 4)
+  (->> (fn [] [nil nil :f#2 (when (> (rand) 0.5)
+                              :f#2)])
+       (repeatedly 4)
        (apply concat)))
 
+(defn sn1 []
+  (->> [nil nil nil nil :c1 nil nil nil ]
+       (repeat 2)
+       (apply concat)))
 
 (defn snare1 []
   (->> [nil nil nil nil :c1 nil nil nil]
@@ -35,9 +40,12 @@
        (repeat 2)
        (apply concat)))
 
+(defn chords1 []
+  [nil nil nil :c1 nil nil :g0 nil nil nil :g0])
+
 (comment
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :loop-length 4
-          :channel 6}
-         #'bd1))
+          :channel 2}
+         #'chords1))

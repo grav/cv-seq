@@ -20,6 +20,7 @@
                                    :on-click stop-sequence}])]])
 
 (defn ^:export main []
-  (r/render [app {:!app-state live.core/!app-state
-                  :stop-sequence live.core/stop-sequence!}]
-            (js/document.getElementById "app")))
+  (-> (live.core/init)
+      (.then #(r/render [app {:!app-state live.core/!app-state
+                              :stop-sequence live.core/stop-sequence!}]
+                        (js/document.getElementById "app")))))
