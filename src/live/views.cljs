@@ -21,7 +21,7 @@
       ^{:key id} [sequence-view id {:sequence sequence
                                     :on-click stop-sequence}])]])
 
-(defn ^:export main []
+(defn ^:dev/after-load main []
   (-> (live.core/init)
       (.then #(r/render [app {:!app-state live.core/!app-state
                               :stop-sequence live.core/stop-sequence!}]
