@@ -17,15 +17,19 @@
 
 (defonce origin (.now js/performance))
 
-(defn get-output-p [prefix]
+(defn get-all-outputs []
   (-> (.requestMIDIAccess js/navigator)
       (.then (fn [m]
                (->> m
                     (.-outputs)
                     (.values)
-                    es6-iterator-seq
-                    (filter #(str/starts-with?
-                               (.-name %) prefix))
+                    es6-iterator-seq)))))
+
+(defn get-output-p [prefix]
+  (-> (get-all-outputs)
+      (.then (fn [devices]
+               (->> devices
+                    (filter #(str/starts-with? (.-name %) prefix))
                     first)))))
 
 (defn duration []
@@ -231,7 +235,7 @@
 ;;; fluidsynth -a pulseaudio -m alsa_seq -l /usr/share/soundfonts/freepats-general-midi.sf2
 
 (defn init []
-  (-> (get-output-p "E")
+  (-> (get-output-p "TORAIZ")
       (.then #(swap! !app-state assoc :output %))))
 
 

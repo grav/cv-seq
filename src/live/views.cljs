@@ -13,11 +13,13 @@
    (str function " #" channel "")])
 
 (defn app [{:keys [!app-state stop-sequence]}]
- [:div "Sequences"
   [:div
-   (for [[id sequence] (:sequences @!app-state)]
-     ^{:key id} [sequence-view id {:sequence sequence
-                                   :on-click stop-sequence}])]])
+   [:div (str "Device: " (pr-str (.-name (:output @!app-state))))]
+   [:div "Sequences"]
+   [:div
+    (for [[id sequence] (:sequences @!app-state)]
+      ^{:key id} [sequence-view id {:sequence sequence
+                                    :on-click stop-sequence}])]])
 
 (defn ^:export main []
   (-> (live.core/init)
