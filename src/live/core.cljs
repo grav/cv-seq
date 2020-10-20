@@ -77,13 +77,14 @@
         (+ note-val))))
 
 
-(defn note->midi-message [note
-                          {:keys [length
-                                  velocity
-                                  offset
-                                  tempo
-                                  sustain
+(defn note->midi-message [{:keys [note
+                                  length
+                                   velocity
+                                   offset
+                                   tempo
+                                   sustain
                                   channel]}]
+  (println 'note note)
   (let [secs-per-beat (bpm->secs-per-beat tempo)
         note-val (note->data1 note)]
     [{:type :note-on
@@ -98,38 +99,46 @@
       :data2 0
       :channel channel}]))
 
-(defn sequence->notes [{:keys [length velocity tempo offset channel]} seq]
-  (assert (and tempo offset) "Must set tempo and offset!")
+(defn sequence->notes [{:keys [length offset velocity tempo channel]
+                        :or {channel 1}} seq]
+  (assert (and tempo) "Must set tempo!")
   (->> seq
-       (reduce (fn [{:keys [notes] :as args}  n]
-                 (let [offset' (get args :offset offset)]
-                   {:notes (concat notes
-                                   (when n
-                                     (note->midi-message n
-                                                         {:length length
-                                                          :velocity velocity
-                                                          :tempo tempo
-                                                          :offset offset'
-                                                          :channel (or channel 0)})))
-                    :offset (+ (/ (bpm->secs-per-beat tempo)
-                                  4)
-                               offset')}))
+       (reduce (fn [{:keys [notes offset] :as _args :or {offset 0}}  n]
+                 {:notes (concat notes
+                                 (->> (if (sequential? n) n [n])
+                                      (remove nil?)
+                                      (map #(note->midi-message (merge
+                                                                 {:length length
+                                                                   :velocity velocity
+                                                                   :tempo tempo
+                                                                   :offset offset
+                                                                  :channel channel}
+                                                                 (if (map? %) % {:note %}))))
+                                      (apply concat)))
+                  :offset (+ (/ (bpm->secs-per-beat tempo)
+                                4)
+                             offset)})
                nil)
        :notes))
 
+(comment
+  (sequence->notes
+   {:tempo 120
+    :offset 0
+    :channel 10} [:c4]))
+
 (defn play-notes! [{:keys [tempo offset channel output] :as args} notes]
   (doseq [{:keys [type data1 data2 time channel]} (sequence->notes
-                                                    {:tempo tempo
-                                                     :offset offset
-                                                     :channel channel}
-                                                    notes)]
+                                                   {:tempo tempo
+                                                    :channel channel}
+                                                   notes)]
     (let [status (+ (get {:note-on note-on
                           :note-off note-off}
                          type)
-                    (or channel 0))]
+                    (dec channel))]
       (.send (or output (:output @!app-state))
              #js[status data1 data2]
-             (* 1000 time)))))
+             (* 1000 (+ offset time))))))
 
 
 #_(defn schedule! [notes-fn offset]
@@ -151,8 +160,10 @@
            {:channel channel
             :function (:name (meta notes-fn-var))
             :callback-id (js/setTimeout (fn []
-                                          (play-notes! args
-                                                       (notes-fn-var))
+                                          (try (play-notes! args
+                                                            (notes-fn-var))
+                                               (catch js/Error e
+                                                   (println 'boom e)))
                                           (loop! (assoc args :offset next-offset :id id)
                                                  notes-fn-var))
                                         delay)})))
@@ -218,17 +229,12 @@
 (defn melody []
   [:g4 nil nil :c4 nil nil :d#4 nil :g4 nil :c4 nil :g#4 nil :c4 nil])
 
-(comment
-  (schedule! my-notes (next-bar 120 4)))
-
 (defn arp1 []
   (let [es [:c1 :g1 :a#1 :d2 :d#2]]
     (concat es (drop 1 (reverse (drop 1 es))))))
 
 (defn bass2 []
   [nil :c0 nil :c0 nil nil nil :c1 nil nil nil :c0 nil :d#2 :c2 :c1])
-
-
 
 
 ;;; fluidsynth
@@ -243,3 +249,21 @@
   (let [{:keys [callback-id]} (get-in @!app-state [:sequences id])]
     (js/clearTimeout callback-id)
     (swap! !app-state update :sequences dissoc id)))
+
+(defn stop-all! []
+  (doseq [[id _] (:sequences @!app-state)]
+    (stop-sequence! id)))
+
+(defn repli
+  [n es]
+  (->> es
+       ((if (fn? es) repeatedly repeat) n)
+       (apply concat)))
+
+(defn stop-matching! [{:keys [channel function]}]
+  (doseq [[id {c :channel f :function}] (:sequences @!app-state)
+          :when (and (or (nil? channel)
+                         (= channel c))
+                     (or (nil? function)
+                         (= function f)))]
+    (stop-sequence! id)))

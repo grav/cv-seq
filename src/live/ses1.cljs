@@ -1,5 +1,5 @@
 (ns live.ses1
-  (:require [live.core :refer [loop! next-beat next-bar]]))
+  (:require [live.core :refer [loop! next-beat next-bar repli]]))
 
 (defn bass1 []
   (->> [:c2 nil nil :c1 nil nil :g1 nil]
@@ -12,7 +12,8 @@
        (apply concat)))
 
 (defn perc1 []
-  (->> [:a#1 nil :g1 nil :c1 nil nil :c1 nil nil :c2 nil nil nil :c3]))
+  (->> [[:a#1 :d3] nil {:note :g1 :length (/ 1 4)}  nil :c1 nil nil :c1 nil nil :c2 nil nil nil :c3]))
+
 
 (defn bassic1
   []
@@ -29,8 +30,7 @@
 (defn hh1 []
   (->> (fn [] [nil nil :f#1 (when (> (rand) 0.5)
                               :f#1)])
-       (repeatedly 4)
-       (apply concat)))
+       (repli 4)))
 
 (defn sn1 []
   (->> [nil nil (when (> (rand) 0.2) :d2) nil :d1 nil nil (when (> (rand) 0.7)
@@ -46,9 +46,21 @@
 (defn chords1 []
   [nil nil nil :c1 nil nil :g0 nil nil nil :g0])
 
+(defn arp2 []
+  (->> [:g3 nil 'd4 nil :c3 nil nil :c4]
+       (repeat 2)
+       (apply concat)))
+
 (comment
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :loop-length 4
-          :channel 0}
+          :channel 11}
          #'perc1))
+
+(comment
+  (live.core/stop-all!)
+
+  (live.core/stop-matching! {:function 'perc1})
+
+  (live.core/stop-matching! {:channel 10}))
