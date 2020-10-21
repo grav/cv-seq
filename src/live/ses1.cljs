@@ -26,6 +26,9 @@
 (defn bassic3 []
   [nil nil :d2 nil :d2 nil nil nil nil :f3 nil nil :d2 nil nil :d3])
 
+(defn bass1 []
+  {:sequence [nil nil :c1 nil :c1 nil nil nil :c1 nil nil :c1 nil nil :c1 nil]
+   :transpose 0})
 
 (defn hh1 []
   (->> (fn [] [nil nil :f#1 (when (> (rand) 0.5)
@@ -33,15 +36,15 @@
        (repli 4)))
 
 (defn sn1 []
-  (->> [nil nil (when (> (rand) 0.2) :d2) nil :d1 nil nil (when (> (rand) 0.7)
-                                                           :d2)]
-       (repeat 2)
-       (apply concat)))
+  (->> (fn [][nil nil (when (> (rand) 0.9) :d1) nil :d1 nil nil (when (> (rand) 0.7)
+                                                                  :d1)])
+       (repli 2)))
 
 (defn arp1 []
-  (->> [:c3 :f3 :g3 :a#3 :c4 :c3 :c4 :a#2]
-       (repeat 2)
-       (apply concat)))
+  {:sequence (->> [:c3 :f3 :g3 :a#3 :c4 :c3 :c4 :a#2]
+                  (repeat 2)
+                  (apply concat))
+   :transpose 0})
 
 (defn chords1 []
   [nil nil nil :c1 nil nil :g0 nil nil nil :g0])
@@ -55,12 +58,12 @@
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :loop-length 4
-          :channel 11}
-         #'perc1))
+          :channel 10}
+         #'sn1))
 
 (comment
   (live.core/stop-all!)
 
-  (live.core/stop-matching! {:function 'perc1})
+  (live.core/stop-matching! {:function 'sn1})
 
-  (live.core/stop-matching! {:channel 10}))
+  (live.core/stop-matching! {:channel 151}))

@@ -82,44 +82,46 @@
                                    velocity
                                    offset
                                    tempo
-                                   sustain
+                                  sustain
+                                  transpose
                                   channel]}]
-  (println 'note note)
   (let [secs-per-beat (bpm->secs-per-beat tempo)
         note-val (note->data1 note)]
     [{:type :note-on
       :time offset
-      :data1 note-val
+      :data1 (+ note-val transpose)
       :data2 (int (* (or velocity 0.8) 128))
       :channel channel}
      {:type :note-off
       :time (+ offset
                (* (or length (/ 1 16)) 4 secs-per-beat (or sustain 0.9)))
-      :data1 note-val
+      :data1 (+ note-val transpose)
       :data2 0
       :channel channel}]))
 
-(defn sequence->notes [{:keys [length offset velocity tempo channel]
+(defn sequence->notes [{:keys [length velocity tempo channel]
                         :or {channel 1}} seq]
   (assert (and tempo) "Must set tempo!")
-  (->> seq
-       (reduce (fn [{:keys [notes offset] :as _args :or {offset 0}}  n]
-                 {:notes (concat notes
-                                 (->> (if (sequential? n) n [n])
-                                      (remove nil?)
-                                      (map #(note->midi-message (merge
-                                                                 {:length length
-                                                                   :velocity velocity
-                                                                   :tempo tempo
-                                                                   :offset offset
-                                                                  :channel channel}
-                                                                 (if (map? %) % {:note %}))))
-                                      (apply concat)))
-                  :offset (+ (/ (bpm->secs-per-beat tempo)
-                                4)
-                             offset)})
-               nil)
-       :notes))
+  (let [{:keys [sequence] :as sequence-params} (if (map? seq) seq {:sequence seq})]
+    (->> sequence
+         (reduce (fn [{:keys [notes offset] :as _args :or {offset 0}}  n]
+                   {:notes (concat notes
+                                   (->> (if (sequential? n) n [n])
+                                        (remove nil?)
+                                        (map #(note->midi-message (merge
+                                                                   sequence-params
+                                                                   {:length length
+                                                                     :velocity velocity
+                                                                     :tempo tempo
+                                                                     :offset offset
+                                                                    :channel channel}
+                                                                   (if (map? %) % {:note %}))))
+                                        (apply concat)))
+                    :offset (+ (/ (bpm->secs-per-beat tempo)
+                                  4)
+                               offset)})
+                 nil)
+         :notes)))
 
 (comment
   (sequence->notes
