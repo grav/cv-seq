@@ -97,27 +97,24 @@
                (* (or length (/ 1 16)) 4 secs-per-beat (or sustain 0.9)))
       :data1 (+ note-val transpose)
       :data2 0
-      :channel channel}]))
+      :channel (or channel 1)}]))
 
-(defn sequence->notes [{:keys [length velocity tempo channel]
-                        :or {channel 1}} seq]
+(defn sequence->notes [{:keys [tempo] :as args} seq]
   (assert (and tempo) "Must set tempo!")
-  (let [{:keys [sequence] :as sequence-params} (if (map? seq) seq {:sequence seq})]
+  (let [{:keys [sequence step-length] :as sequence-params} (if (map? seq) seq {:sequence seq})]
     (->> sequence
          (reduce (fn [{:keys [notes offset] :as _args :or {offset 0}}  n]
                    {:notes (concat notes
                                    (->> (if (sequential? n) n [n])
                                         (remove nil?)
                                         (map #(note->midi-message (merge
+                                                                   args
+                                                                   {:offset offset}
                                                                    sequence-params
-                                                                   {:length length
-                                                                     :velocity velocity
-                                                                     :tempo tempo
-                                                                     :offset offset
-                                                                    :channel channel}
                                                                    (if (map? %) % {:note %}))))
                                         (apply concat)))
-                    :offset (+ (/ (bpm->secs-per-beat tempo)
+                    :offset (+ (* (bpm->secs-per-beat tempo)
+                                  (or step-length (/ 1 16))
                                   4)
                                offset)})
                  nil)
@@ -131,8 +128,7 @@
 
 (defn play-notes! [{:keys [tempo offset channel output] :as args} notes]
   (doseq [{:keys [type data1 data2 time channel]} (sequence->notes
-                                                   {:tempo tempo
-                                                    :channel channel}
+                                                   args
                                                    notes)]
     (let [status (+ (get {:note-on note-on
                           :note-off note-off}

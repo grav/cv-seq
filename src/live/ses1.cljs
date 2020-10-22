@@ -1,15 +1,28 @@
 (ns live.ses1
   (:require [live.core :refer [loop! next-beat next-bar repli]]))
 
+(def x nil)
+
 (defn bass1 []
   (->> [:c2 nil nil :c1 nil nil :g1 nil]
        (repeat 2)
        (apply concat)))
 
+(defn bass2 []
+  {:sequence (concat [:c1 nil nil :c1 nil nil nil nil]
+                     [:d#1 nil nil :d#1 nil nil nil nil]
+                     [:f1 nil nil :f1 nil nil nil nil]
+                     [:g#1 nil nil :g#1 nil nil {:note 'g1
+                                                 :length (/ 1 8)} nil])
+   :length (/ 1 16)})
+
 (defn bd1 []
   (->> [:c1 nil nil nil]
        (repeat 4)
        (apply concat)))
+
+(defn bd2 []
+  (->> ['c1 x 'c1 x x 'c1 x x 'c1]))
 
 (defn perc1 []
   (->> [[:a#1 :d3] nil {:note :g1 :length (/ 1 4)}  nil :c1 nil nil :c1 nil nil :c2 nil nil nil :c3]))
@@ -49,21 +62,36 @@
 (defn chords1 []
   [nil nil nil :c1 nil nil :g0 nil nil nil :g0])
 
+(defn chords2 []
+  (->> [nil [:c4 :d#4] nil nil nil]
+       (repli 4)))
+
 (defn arp2 []
   (->> [:g3 nil 'd4 nil :c3 nil nil :c4]
        (repeat 2)
        (apply concat)))
 
+(defn melody1 []
+  {:length (/ 1 4)
+   :step-length (/ 1 8)
+   :sequence [[:d#3 :g3] x x [:d3 :f3] x x ['a#2 :d3] x ['c3 :d#3] x x ['g2 'c3]]})
+
+
 (comment
   (loop! {:offset (next-bar 120 4)
           :tempo 120
-          :loop-length 4
-          :channel 10}
-         #'sn1))
+          :loop-length 8
+          :channel 15}
+         #'bass2))
+
+
 
 (comment
-  (live.core/stop-all!)
+   (deref live.core/!app-state)
 
-  (live.core/stop-matching! {:function 'sn1})
+   (live.core/stop-all!)
 
-  (live.core/stop-matching! {:channel 151}))
+
+   (live.core/stop-matching! {:function 'bd1})
+
+   (live.core/stop-matching! {:channel 15}))
