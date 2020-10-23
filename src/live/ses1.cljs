@@ -82,16 +82,12 @@
           :tempo 120
           :loop-length 8
           :channel 15}
-         #'bass2))
+         #'bass2)
 
+  (deref live.core/!app-state)
 
+  (live.core/stop-all!)
 
-(comment
-   (deref live.core/!app-state)
+  (live.core/stop-matching! {:function 'bd1})
 
-   (live.core/stop-all!)
-
-
-   (live.core/stop-matching! {:function 'bd1})
-
-   (live.core/stop-matching! {:channel 15}))
+  (live.core/stop-matching! {:channel 15}))

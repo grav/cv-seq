@@ -94,10 +94,14 @@
       :channel channel}
      {:type :note-off
       :time (+ offset
-               (* (or length (/ 1 16)) 4 secs-per-beat (or sustain 0.9)))
+               (* (or length (/ 1 16))
+                  4
+                  secs-per-beat (or sustain 0.9)))
       :data1 (+ note-val transpose)
       :data2 0
       :channel (or channel 1)}]))
+
+(def beats-per-bar 4)
 
 (defn sequence->notes [{:keys [tempo] :as args} seq]
   (assert (and tempo) "Must set tempo!")
@@ -114,8 +118,10 @@
                                                                    (if (map? %) % {:note %}))))
                                         (apply concat)))
                     :offset (+ (* (bpm->secs-per-beat tempo)
-                                  (or step-length (/ 1 16))
-                                  4)
+                                  (or step-length
+                                      (:step-length args)
+                                      (/ 1 16))
+                                  beats-per-bar)
                                offset)})
                  nil)
          :notes)))
@@ -126,7 +132,7 @@
     :offset 0
     :channel 10} [:c4]))
 
-(defn play-notes! [{:keys [tempo offset channel output] :as args} notes]
+(defn play-notes! [{:keys [offset output] :as args} notes]
   (doseq [{:keys [type data1 data2 time channel]} (sequence->notes
                                                    args
                                                    notes)]
