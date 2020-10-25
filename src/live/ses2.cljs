@@ -3,11 +3,24 @@
 
 (def x nil)
 
+(def !key :c)
 
+(def !scale :minor)
+
+(def !scale-transpose 0)
 
 (defn arp1 []
-  {:sequence ['c3 'f3 'g3 'f3 'a#3 'c4]
+  {:sequence [13 33 53 33 53 14]
+   :key !key
+   :scale-transpose !scale-transpose
+   :scale !scale
    :length (/ 1 12)})
+
+(defn arp2 []
+  {:sequence [33 53 73 14 34 54]
+   :key !key
+   :scale-transpose !scale-transpose
+   :scale !scale})
 
 (defn bd1 []
   [[:c1 :f#1] x :f#1 [:d1 :c1] :f#1 (when (> (rand) 0.8) :a#1)])
@@ -25,20 +38,25 @@
    x x x x x x
    ['g3 'c4 'f4] x ['g3 'c4 'f4]])
 
+(defn scale []
+  {:scale !scale
+   :key !key
+   :scale-transpose !scale-transpose
+   :sequence [13 23 33 43 53 63 73 83]})
 
 
 (comment
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :step-length (/ 1 12)
-          :loop-length 8
-          :channel 12}
-         #'chords1)
+          :loop-length 2
+          :channel 15}
+         #'bass1)
 
   (deref live.core/!app-state)
 
   (live.core/stop-all!)
 
-  (live.core/stop-matching! {:function 'chords1})
+  (live.core/stop-matching! {:function 'bd1})
 
   (live.core/stop-matching! {:channel 15}))

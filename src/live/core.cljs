@@ -60,33 +60,64 @@
 (defn next-beat [bpm]
   (next-bar bpm 1))
 
-(defn note->data1 [note]
-  (let [[a b c d] (name note)
-        oct (-> (cond (and (= b "-")
-                           (nil? d))
-                      (str b c)
-                      c
-                      (str c d)
-                      :else
-                      (str b))
-                js/parseInt)
-        note-val (cond-> (get {"c" 0 "d" 2 "e" 4 "f" 5 "g" 7 "a" 9 "b" 11} a)
-                         (= b "#") inc)]
-    (-> (+ 2 oct)
-        (* 12)
-        (+ note-val))))
+(defn note->step [[a b]]
+  (cond-> (get {"c" 0 "d" 2 "e" 4 "f" 5 "g" 7 "a" 9 "b" 11} a)
+    (= b "#") inc
+    (= b "b") dec))
 
+(defn try-parse-int [s]
+  (let [r (js/parseInt s)]
+    (when-not (js/isNaN r)
+      r)))
+
+(defn note->octave [note]
+ (-> (last note)
+     try-parse-int))
+
+(def major [1 3 5 6 8 10 12])
+
+(def minor [1 3 4 6 8 9 11])
+
+(def scales
+  {:minor minor
+   :dorian [1 3 4 6 8 10 11]
+   :ionian major
+   :major major
+   :frygian [1 3 5 7 8 10 12]})
+
+(def key->offset
+  {"c" 0 "c#" 1 "db" 1 "d" 2 "d#" 3 "eb" 3 "e" 4 "fb" 4 "e#" 5 "f" 5 "f#" 6 "gb" 6 "g" 7 "g#" 8 "ab" 8 "a" 9 "a#" 10 "bb" 10 "b" 11 "cb" 11})
+
+(defn scale-step->step [scale-step {:keys [scale key scale-transpose]}]
+  (assert (and scale) "scale and key required for scale-step->step")
+  (let [step (-> scale-step
+                 (+ (or scale-transpose) 0)
+                 dec)]
+
+    (-> (nth (get scales scale) (mod step 7))
+        dec
+        ;; we may have increased in octaves - add these
+        (+ (* 12 (bit-shift-left (/ step 7) 0)))
+        (+ (key->offset (name key))))))
 
 (defn note->midi-message [{:keys [note
                                   length
-                                   velocity
-                                   offset
-                                   tempo
+                                  velocity
+                                  offset
+                                  tempo
                                   sustain
                                   transpose
-                                  channel]}]
+                                  channel] :as args}]
   (let [secs-per-beat (bpm->secs-per-beat tempo)
-        note-val (note->data1 note)]
+        note-str (if (integer? note)
+                   (str note)
+                   (name note))
+        step (if (try-parse-int (first note-str))
+               (scale-step->step (js/parseInt (first note-str)) args)
+               (note->step note-str))
+        octave (note->octave note-str)
+        note-val (+ (* 12 (+ 2 octave))
+                    step)]
     [{:type :note-on
       :time offset
       :data1 (+ note-val transpose)
@@ -100,6 +131,12 @@
       :data1 (+ note-val transpose)
       :data2 0
       :channel (or channel 1)}]))
+
+(comment
+  (note->octave  "c3")
+
+  (note->midi-message {:note :c3
+                       :offset 0}))
 
 (def beats-per-bar 4)
 
@@ -171,74 +208,6 @@
                                           (loop! (assoc args :offset next-offset :id id)
                                                  notes-fn-var))
                                         delay)})))
-
-(defn funk []
-  (->> (fn [] [nil nil nil nil :d1 nil nil (rand-nth [nil :d1])])
-       (repeatedly 2)
-       (apply concat)))
-
-
-(defn funk-clap []
-  (->> [[nil nil nil :d#1 nil nil :d#1 nil]
-        [:a#0 nil nil :d#1 nil nil :d#1 nil]]
-       rand-nth
-       (repeat 2)
-       (apply concat)))
-
-(defn pad []
-  [nil nil (rand-nth [:c1 :g0])])
-
-(defn funk-clap2 []
-  [] #_(->> [[nil nil :d#1 :d#1 nil nil :d#1 nil]
-             [:d#1 :d#1 nil :d#1 nil nil :d#1 nil]]
-            rand-nth
-            (repeat 2)
-            (apply concat)))
-
-(defn bd []
-  (->> [:c1 nil nil :c1 nil nil :c1 nil nil nil nil :c1 nil nil :c1]))
-
-(defn bd2 []
-  (->> [:c1 nil nil nil]
-       (repeat 5)
-       (apply concat)))
-
-
-(defn hihats []
-  (->> (fn [] [nil nil :c#1 nil])
-       (repeatedly 4)
-       (apply concat)))
-
-(defn bass []
-  (apply concat (repeat 2 [:c1 :c1 nil :c1 nil nil :c1 nil])))
-
-(defn chord1 []
-  [:d#5 nil nil :d#5 nil nil :d#5 nil nil :d#5 nil nil :d#5 nil :f5 nil])
-
-(defn chord2 []
-  [:g4 nil nil :g4 nil nil :g4 nil nil :g4 nil nil :g4 nil :a#4 nil])
-
-(defn chord3 []
-  [:c5 nil nil :c5 nil nil :c5 nil nil :c5 nil nil :c5 nil :c5 nil])
-
-(defn snare []
-  (concat (repeat 4 nil) [:c1]))
-
-(defn my-notes []
-
-  (->> [[:c2 :g2 :e2 :c2 :g2 nil nil :g2 :c3 :c3 :b2 :a2 :g2]
-        [:g3 nil :f3 :d3 :e3 nil :c3 :d3 :e3 :f3 :d3 :g3 :e3]]
-       rand-nth))
-
-(defn melody []
-  [:g4 nil nil :c4 nil nil :d#4 nil :g4 nil :c4 nil :g#4 nil :c4 nil])
-
-(defn arp1 []
-  (let [es [:c1 :g1 :a#1 :d2 :d#2]]
-    (concat es (drop 1 (reverse (drop 1 es))))))
-
-(defn bass2 []
-  [nil :c0 nil :c0 nil nil nil :c1 nil nil nil :c0 nil :d#2 :c2 :c1])
 
 
 ;;; fluidsynth

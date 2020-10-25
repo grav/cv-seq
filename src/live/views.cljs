@@ -14,7 +14,9 @@
 
 (defn app [{:keys [!app-state stop-sequence]}]
   [:div
-   [:div (str "Device: " (pr-str (.-name (:output @!app-state))))]
+   (if (:output @!app-state)
+     [:div (str "Device: " (pr-str (.-name (:output @!app-state))))]
+     [:div "no device ..."])
    [:div "Sequences"]
    [:div
     (for [[id sequence] (:sequences @!app-state)]
