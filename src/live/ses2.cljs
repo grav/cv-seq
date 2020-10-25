@@ -31,7 +31,6 @@
 (defn melody1 []
   ['d#3 x x x x x 'd3 'd#3 'd3 x x 'a#2 'c3 x x x x x x x x x 'a#2 'g2 'f2 'g2 'a#2 'g2 'f2 x 'd#2 'f2 x 'd2 x 'a#1 'c2])
 
-
 (defn chords1 []
   [x x x x x x
    ['g3 'c4 'd#4] x ['g3 'c4 'd#4] x x x
@@ -46,12 +45,33 @@
 
 
 (comment
+
+  ;; modulate the cc#1 with a sine wave
+  (let [juno-mod-cc# 01
+        juno-channel 11
+        now (.now js/performance)
+        n 1000 ;; resolution
+        t 4000 ;; time (ms)
+        delay 1000 ;; delay (ms)
+        xs (->> (range n)
+                (map #(/ % n)))
+        ys (for [i xs]
+             (js/Math.sin (* 2 js/Math.PI i) n))
+        ys' (map #(int (* 63.5 (+ 1 %))) ys)
+        xs' (map #(* % t) xs)
+        output (:output @live.core/!app-state)]
+    xs' #_(map vector xs ys')
+    (doseq [[x y] (map vector xs' ys')]
+      (.send output
+             #js[(+ live.core/control-change (dec juno-channel)) juno-mod-cc# y]
+             (+ delay x now))))
+
   (loop! {:offset (next-bar 120 4)
           :tempo 120
           :step-length (/ 1 12)
           :loop-length 2
-          :channel 15}
-         #'bass1)
+          :channel 11}
+         #'arp2)
 
   (deref live.core/!app-state)
 

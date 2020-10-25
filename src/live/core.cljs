@@ -12,6 +12,8 @@
 
 (def vol 0x7f)
 
+(def control-change 0xb0)
+
 (defonce !app-state (r/atom {:tempo 120
                              :output nil}))
 
