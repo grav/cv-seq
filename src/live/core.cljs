@@ -14,6 +14,14 @@
 
 (def control-change 0xb0)
 
+(def all-off
+  (for [channel (range 16)
+        note (range 128)]
+    {:type :note-off
+     :data1 note
+     :data2 0
+     :channel (inc channel)}))
+
 (defonce !app-state (r/atom {:tempo 120
                              :output nil}))
 
@@ -103,6 +111,7 @@
         (+ (key->offset (name key))))))
 
 (defn note->midi-message [{:keys [note
+                                  midi
                                   length
                                   velocity
                                   offset
@@ -120,19 +129,24 @@
         octave (note->octave note-str)
         note-val (+ (* 12 (+ 2 octave))
                     step)]
-    [{:type :note-on
-      :time offset
-      :data1 (+ note-val transpose)
-      :data2 (int (* (or velocity 0.8) 128))
-      :channel channel}
-     {:type :note-off
-      :time (+ offset
-               (* (or length (/ 1 16))
-                  4
-                  secs-per-beat (or sustain 0.9)))
-      :data1 (+ note-val transpose)
-      :data2 0
-      :channel (or channel 1)}]))
+    (if midi
+      (let [[type data1 data2] midi]
+        [{:type type
+          :data1 data1
+          :data2 data2}])
+      [{:type :note-on
+        :time offset
+        :data1 (+ note-val transpose)
+        :data2 (int (* (or velocity 0.8) 128))
+        :channel channel}
+       {:type :note-off
+        :time (+ offset
+                 (* (or length (/ 1 16))
+                    4
+                    secs-per-beat (or sustain 0.9)))
+        :data1 (+ note-val transpose)
+        :data2 0
+        :channel (or channel 1)}])))
 
 (comment
   (note->octave  "c3")
@@ -171,10 +185,8 @@
     :offset 0
     :channel 10} [:c4]))
 
-(defn play-notes! [{:keys [offset output] :as args} notes]
-  (doseq [{:keys [type data1 data2 time channel]} (sequence->notes
-                                                   args
-                                                   notes)]
+(defn play-notes! [{:keys [offset output]} notes]
+  (doseq [{:keys [type data1 data2 time channel]} notes]
     (let [status (+ (get {:note-on note-on
                           :note-off note-off}
                          type)
@@ -204,7 +216,7 @@
             :function (:name (meta notes-fn-var))
             :callback-id (js/setTimeout (fn []
                                           (try (play-notes! args
-                                                            (notes-fn-var))
+                                                            (sequence->notes args (notes-fn-var)))
                                                (catch js/Error e
                                                    (println 'boom e)))
                                           (loop! (assoc args :offset next-offset :id id)
